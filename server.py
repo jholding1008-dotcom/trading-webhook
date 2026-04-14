@@ -1,10 +1,10 @@
 import logging
+import os
 import sys
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# Force logs to stdout so Render captures them
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(message)s",
@@ -18,9 +18,7 @@ latest_signal = {}
 
 logger.info("SERVER VERSION: payload logging enabled")
 
-# =========================
-# WEBHOOK (TradingView → Render)
-# =========================
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
     global latest_signal
@@ -38,9 +36,6 @@ def webhook():
     return jsonify({"status": "bad request"}), 400
 
 
-# =========================
-# SIGNAL (MT4 EA → Render)
-# =========================
 @app.route('/signal', methods=['GET'])
 def signal():
     global latest_signal
@@ -53,10 +48,13 @@ def signal():
     return jsonify(sig)
 
 
-# =========================
-# ROOT
-# =========================
-@app.route('/')
+@app.route('/', methods=['GET'])
 def home():
     logger.info("Health check hit")
     return "Trading Webhook Server Running", 200
+
+
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 10000))
+    logger.info("Starting server on port %s", port)
+    app.run(host='0.0.0.0', port=port)
