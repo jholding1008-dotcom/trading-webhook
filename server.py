@@ -1,11 +1,22 @@
+import logging
+import sys
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# Store latest signal
+# Force logs to stdout so Render captures them
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+    stream=sys.stdout,
+    force=True
+)
+
+logger = logging.getLogger(__name__)
+
 latest_signal = {}
 
-print("🚀 SERVER VERSION: payload logging enabled")
+logger.info("SERVER VERSION: payload logging enabled")
 
 # =========================
 # WEBHOOK (TradingView → Render)
@@ -16,13 +27,14 @@ def webhook():
 
     data = request.get_json(silent=True)
 
-    print("📩 Webhook payload received:", data)
+    logger.info("Webhook payload received: %s", data)
+    logger.info("Raw webhook body: %s", request.get_data(as_text=True))
 
     if data:
         latest_signal = data
         return jsonify({"status": "ok"}), 200
 
-    print("❌ Invalid webhook body:", request.data)
+    logger.warning("Invalid webhook body")
     return jsonify({"status": "bad request"}), 400
 
 
@@ -34,23 +46,17 @@ def signal():
     global latest_signal
 
     sig = latest_signal
-    latest_signal = {}  # clear after sending
+    latest_signal = {}
 
-    print("📤 Sending signal to MT4:", sig)
+    logger.info("Sending signal to MT4: %s", sig)
 
     return jsonify(sig)
 
 
 # =========================
-# ROOT (health check)
+# ROOT
 # =========================
 @app.route('/')
 def home():
+    logger.info("Health check hit")
     return "Trading Webhook Server Running", 200
-
-
-# =========================
-# RUN APP
-# =========================
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000)
