@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# Stores latest unread signal for each broker
+# Stores latest signal for each broker
 latest_signals = {
     "vantage": {},
     "ic": {}
@@ -33,12 +33,10 @@ def webhook_vantage():
 
 @app.route("/signal_vantage", methods=["GET"])
 def signal_vantage():
-    # Return current signal once, then clear it
+    # Return current signal WITHOUT clearing it
     signal = latest_signals["vantage"]
 
-    latest_signals["vantage"] = {}
-
-    print("Delivered + Cleared VANTAGE signal:", signal)
+    print("Delivered VANTAGE signal:", signal)
 
     return jsonify(signal)
 
@@ -63,12 +61,10 @@ def webhook_ic():
 
 @app.route("/signal_ic", methods=["GET"])
 def signal_ic():
-    # Return current signal once, then clear it
+    # Return current signal WITHOUT clearing it
     signal = latest_signals["ic"]
 
-    latest_signals["ic"] = {}
-
-    print("Delivered + Cleared IC signal:", signal)
+    print("Delivered IC signal:", signal)
 
     return jsonify(signal)
 
