@@ -2,39 +2,50 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# Stores latest signal for each broker
-latest_signals = {
-    "vantage": {},
-}
+latest_signal = None
+SECRET_KEY = "CHANGE_ME"
 
-@app.route("/", methods=["GET"])
+@app.route("/")
 def home():
-    return "Webhook server is running", 200
+    return "Webhook server running"
 
-
-# ==================================================
-# VANTAGE CHANNEL
-# ==================================================
 @app.route("/webhook_vantage", methods=["POST"])
 def webhook_vantage():
-    data = request.get_json(silent=True) or {}
+    global latest_signal
 
-    latest_signals["vantage"] = data
+    data = request.get_json(force=True, silent=True)
 
-    print("Stored VANTAGE signal:", data)
+    if not data:
+        return jsonify({"status": "error", "message": "No JSON received"}), 400
+
+    latest_signal = data
+
+    print("Received TradingView signal:", latest_signal)
 
     return jsonify({
-        "status": "ok",
-        "channel": "vantage",
-        "stored": data
+        "status": "success",
+        "message": "Webhook received",
+        "signal": latest_signal
     })
 
+@app.route("/latest", methods=["GET"])
+def latest():
+    global latest_signal
 
-@app.route("/signal_vantage", methods=["GET"])
-def signal_vantage():
-    # Return current signal WITHOUT clearing it
-    signal = latest_signals["vantage"]
+    secret = request.args.get("secret")
 
-    print("Delivered VANTAGE signal:", signal)
+    if secret != SECRET_KEY:
+        return jsonify({"status": "error", "message": "Invalid secret"}), 403
 
-    return jsonify(signal)
+    if latest_signal is None:
+        return "NO_SIGNAL"
+
+    signal_to_send = latest_signal
+
+    # Clear signal after EA reads it, so it does not repeat the same trade
+    latest_signal = None
+
+    return jsonify(signal_to_send)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
