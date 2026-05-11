@@ -2,146 +2,145 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-latest_signal = None
-latest_ic_signal = None
 SECRET_KEY = "CHANGE_ME"
+
+signals = {
+    "xau_1m": None,
+    "btc_1m": None,
+    "nas_1m": None,
+    "xau_5m": None,
+    "btc_5m": None,
+    "ustec_5m": None,
+}
+
 
 @app.route("/")
 def home():
-    return "Webhook server running"
+    return "Trading webhook server running"
 
-@app.route("/webhook_vantage", methods=["POST"])
-def webhook_vantage():
-    global latest_signal
 
+def save_signal(key):
     data = request.get_json(force=True, silent=True)
 
     if not data:
         return jsonify({"status": "error", "message": "No JSON received"}), 400
 
-    latest_signal = data
-
-    print("Received TradingView signal:", latest_signal)
+    signals[key] = data
+    print(f"Received {key} signal:", data)
 
     return jsonify({
         "status": "success",
-        "message": "Webhook received",
-        "signal": latest_signal
+        "route": key,
+        "signal": data
     })
 
-@app.route("/latest", methods=["GET"])
-def latest():
-    global latest_signal
 
+def get_signal(key):
     secret = request.args.get("secret")
 
     if secret != SECRET_KEY:
         return jsonify({"status": "error", "message": "Invalid secret"}), 403
 
-    if latest_signal is None:
+    if signals[key] is None:
         return "NO_SIGNAL"
 
-    signal_to_send = latest_signal
+    signal = signals[key]
+    signals[key] = None
 
-    # Clear signal after EA reads it, so it does not repeat the same trade
-    latest_signal = None
+    return jsonify(signal)
 
-    return jsonify(signal_to_send)
+
+# ======================
+# VANTAGE 1 MIN ROUTES
+# ======================
+
+@app.route("/webhook_xau_1m", methods=["POST"])
+def webhook_xau_1m():
+    return save_signal("xau_1m")
+
+
+@app.route("/latest_xau_1m", methods=["GET"])
+def latest_xau_1m():
+    return get_signal("xau_1m")
+
+
+@app.route("/webhook_btc_1m", methods=["POST"])
+def webhook_btc_1m():
+    return save_signal("btc_1m")
+
+
+@app.route("/latest_btc_1m", methods=["GET"])
+def latest_btc_1m():
+    return get_signal("btc_1m")
+
+
+@app.route("/webhook_nas_1m", methods=["POST"])
+def webhook_nas_1m():
+    return save_signal("nas_1m")
+
+
+@app.route("/latest_nas_1m", methods=["GET"])
+def latest_nas_1m():
+    return get_signal("nas_1m")
+
+
+# ======================
+# IC MARKETS 5 MIN ROUTES
+# ======================
+
+@app.route("/webhook_xau_5m", methods=["POST"])
+def webhook_xau_5m():
+    return save_signal("xau_5m")
+
+
+@app.route("/latest_xau_5m", methods=["GET"])
+def latest_xau_5m():
+    return get_signal("xau_5m")
+
+
+@app.route("/webhook_btc_5m", methods=["POST"])
+def webhook_btc_5m():
+    return save_signal("btc_5m")
+
+
+@app.route("/latest_btc_5m", methods=["GET"])
+def latest_btc_5m():
+    return get_signal("btc_5m")
+
+
+@app.route("/webhook_ustec_5m", methods=["POST"])
+def webhook_ustec_5m():
+    return save_signal("ustec_5m")
+
+
+@app.route("/latest_ustec_5m", methods=["GET"])
+def latest_ustec_5m():
+    return get_signal("ustec_5m")
+
+
+# ======================
+# OLD ROUTES - OPTIONAL BACKUP
+# ======================
+
+@app.route("/webhook_vantage", methods=["POST"])
+def webhook_vantage():
+    return save_signal("xau_1m")
+
+
+@app.route("/latest", methods=["GET"])
+def latest():
+    return get_signal("xau_1m")
+
 
 @app.route("/webhook_ic", methods=["POST"])
 def webhook_ic():
-    global latest_ic_signal
-
-    data = request.get_json(force=True, silent=True)
-
-    if not data:
-        return jsonify({"status": "error", "message": "No JSON received"}), 400
-
-    latest_ic_signal = data
-
-    print("Received IC Markets signal:", latest_ic_signal)
-
-    return jsonify({
-        "status": "success",
-        "message": "IC webhook received",
-        "signal": latest_ic_signal
-    })
+    return save_signal("xau_5m")
 
 
 @app.route("/latest_ic", methods=["GET"])
 def latest_ic():
-    global latest_ic_signal
+    return get_signal("xau_5m")
 
-    secret = request.args.get("secret")
-
-    if secret != SECRET_KEY:
-        return jsonify({"status": "error", "message": "Invalid secret"}), 403
-
-    if latest_ic_signal is None:
-        return "NO_SIGNAL"
-
-    signal_to_send = latest_ic_signal
-    latest_ic_signal = None
-
-    return jsonify(signal_to_send)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
-
-latest_xau_signal = None
-latest_btc_signal = None
-
-@app.route("/webhook_xau", methods=["POST"])
-def webhook_xau():
-    global latest_xau_signal
-    data = request.get_json(force=True, silent=True)
-    if not data:
-        return jsonify({"status": "error", "message": "No JSON received"}), 400
-
-    latest_xau_signal = data
-    print("Received XAU signal:", latest_xau_signal)
-    return jsonify({"status": "success", "signal": latest_xau_signal})
-
-
-@app.route("/latest_xau", methods=["GET"])
-def latest_xau():
-    global latest_xau_signal
-
-    secret = request.args.get("secret")
-    if secret != SECRET_KEY:
-        return jsonify({"status": "error", "message": "Invalid secret"}), 403
-
-    if latest_xau_signal is None:
-        return "NO_SIGNAL"
-
-    signal_to_send = latest_xau_signal
-    latest_xau_signal = None
-    return jsonify(signal_to_send)
-
-
-@app.route("/webhook_btc", methods=["POST"])
-def webhook_btc():
-    global latest_btc_signal
-    data = request.get_json(force=True, silent=True)
-    if not data:
-        return jsonify({"status": "error", "message": "No JSON received"}), 400
-
-    latest_btc_signal = data
-    print("Received BTC signal:", latest_btc_signal)
-    return jsonify({"status": "success", "signal": latest_btc_signal})
-
-
-@app.route("/latest_btc", methods=["GET"])
-def latest_btc():
-    global latest_btc_signal
-
-    secret = request.args.get("secret")
-    if secret != SECRET_KEY:
-        return jsonify({"status": "error", "message": "Invalid secret"}), 403
-
-    if latest_btc_signal is None:
-        return "NO_SIGNAL"
-
-    signal_to_send = latest_btc_signal
-    latest_btc_signal = None
-    return jsonify(signal_to_send)
