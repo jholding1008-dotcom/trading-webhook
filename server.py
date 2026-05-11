@@ -87,3 +87,61 @@ def latest_ic():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+
+latest_xau_signal = None
+latest_btc_signal = None
+
+@app.route("/webhook_xau", methods=["POST"])
+def webhook_xau():
+    global latest_xau_signal
+    data = request.get_json(force=True, silent=True)
+    if not data:
+        return jsonify({"status": "error", "message": "No JSON received"}), 400
+
+    latest_xau_signal = data
+    print("Received XAU signal:", latest_xau_signal)
+    return jsonify({"status": "success", "signal": latest_xau_signal})
+
+
+@app.route("/latest_xau", methods=["GET"])
+def latest_xau():
+    global latest_xau_signal
+
+    secret = request.args.get("secret")
+    if secret != SECRET_KEY:
+        return jsonify({"status": "error", "message": "Invalid secret"}), 403
+
+    if latest_xau_signal is None:
+        return "NO_SIGNAL"
+
+    signal_to_send = latest_xau_signal
+    latest_xau_signal = None
+    return jsonify(signal_to_send)
+
+
+@app.route("/webhook_btc", methods=["POST"])
+def webhook_btc():
+    global latest_btc_signal
+    data = request.get_json(force=True, silent=True)
+    if not data:
+        return jsonify({"status": "error", "message": "No JSON received"}), 400
+
+    latest_btc_signal = data
+    print("Received BTC signal:", latest_btc_signal)
+    return jsonify({"status": "success", "signal": latest_btc_signal})
+
+
+@app.route("/latest_btc", methods=["GET"])
+def latest_btc():
+    global latest_btc_signal
+
+    secret = request.args.get("secret")
+    if secret != SECRET_KEY:
+        return jsonify({"status": "error", "message": "Invalid secret"}), 403
+
+    if latest_btc_signal is None:
+        return "NO_SIGNAL"
+
+    signal_to_send = latest_btc_signal
+    latest_btc_signal = None
+    return jsonify(signal_to_send)
